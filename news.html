@@ -1,12 +1,21 @@
 <!DOCTYPE html>
+<!-- Відкриття кореневого тегу. lang='uk' — українська мова, клас h-full задає висоту 100% -->
 <html lang="uk" class="h-full">
+<!-- === <head> — метадані документа, підключення бібліотек та власних стилів === -->
 <head>
+<!-- Кодування документа UTF‑8 -->
     <meta charset="UTF-8">
+<!-- Адаптивність: ширина дорівнює ширині екрана, початковий масштаб 1 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Заголовок вкладки браузера -->
     <title>Новинний блог</title>
+<!-- TailwindCSS — утилітарний CSS‑фреймворк -->
     <script src="https://cdn.tailwindcss.com"></script>
+<!-- Marked.js — конвертація Markdown → HTML (підключено «про запас») -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+<!-- EmailJS — надсилання email з браузера без бекенду -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<!-- === Вбудовані CSS‑стилі (оголошено тільки те, чого немає в Tailwind) === -->
     <style>
         .wysiwyg-editor {
             min-height: 200px;
@@ -77,6 +86,7 @@
         }
     </style>
     <script>
+<!-- Конфігурація Tailwind: додаємо власний колір primary -->
         tailwind.config = {
             theme: {
                 extend: {
@@ -88,9 +98,11 @@
         }
     </script>
 </head>
+<!-- === Тіло документа === -->
 <body class="h-full bg-white text-black">
     <div id="app" class="min-h-full">
         <!-- Navigation -->
+<!-- === Головна навігаційна панель (Top Bar) === -->
         <nav class="bg-white shadow-sm border-b border-black">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-16">
@@ -111,8 +123,10 @@
         </nav>
 
         <!-- Main content -->
+<!-- === Основний вміст SPA. Кожна «сторінка» захована/показана через JS === -->
         <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
             <!-- Home page -->
+<!-- === Сторінка «Головна» — список новин + фільтр тегів === -->
             <div id="homePage" class="page">
                 <div class="mb-6">
                     <h2 class="text-3xl font-bold mb-4 text-black">Останні новини</h2>
@@ -132,12 +146,14 @@
             </div>
 
             <!-- News detail page -->
+<!-- === Сторінка перегляду однієї новини === -->
             <div id="newsDetailPage" class="page hidden">
                 <button onclick="showPage('home')" class="mb-4 text-black hover:underline">← Повернутися до списку</button>
                 <div id="newsDetail"></div>
             </div>
 
             <!-- About page -->
+<!-- === Сторінка інформації «Про додаток» === -->
             <div id="aboutPage" class="page hidden">
                 <h2 class="text-3xl font-bold mb-6 text-black">Про додаток</h2>
                 <div class="bg-white border border-black p-6 rounded-lg">
@@ -160,6 +176,7 @@
             </div>
 
             <!-- Register page -->
+<!-- === Сторінка «Реєстрація» === -->
             <div id="registerPage" class="page hidden">
                 <div class="max-w-md mx-auto bg-white border border-black p-6 rounded-lg shadow">
                     <h2 class="text-2xl font-bold mb-6 text-center text-black">Реєстрація</h2>
@@ -212,6 +229,7 @@
             </div>
 
             <!-- Login page -->
+<!-- === Сторінка «Вхід» === -->
             <div id="loginPage" class="page hidden">
                 <div class="max-w-md mx-auto bg-white border border-black p-6 rounded-lg shadow">
                     <h2 class="text-2xl font-bold mb-6 text-center text-black">Вхід до системи</h2>
@@ -243,6 +261,7 @@
             </div>
 
             <!-- Admin page -->
+<!-- === Сторінка «Адміністрування» (доступ лише admin) === -->
             <div id="adminPage" class="page hidden">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-3xl font-bold text-black">Адміністрування новин</h2>
@@ -266,6 +285,7 @@
             </div>
 
             <!-- Add/Edit news form -->
+<!-- === Форма додавання / редагування новини === -->
             <div id="newsFormPage" class="page hidden">
                 <div class="max-w-4xl mx-auto">
                     <div class="flex justify-between items-center mb-6">
@@ -327,12 +347,16 @@
     </div>
 
     <script>
+
+// === Глобальний стан SPA ===
         // Application state
         let currentUser = null;
         let currentPage = 'home';
         let currentFilter = null;
         let editingNewsId = null;
         
+
+// === «База даних» користувачів (у пам'яті для демо) ===
         // Users database (in memory for this demo)
         let users = [
             {
@@ -353,6 +377,8 @@
             }
         ];
         
+
+// === Демонстраційні новини ===
         // Sample data
         let newsData = [
             {
@@ -384,6 +410,8 @@
             }
         ];
 
+
+// === Допоміжні функції (валидація, повідомлення, toggle‑password) ===
         // Utility functions
         function showMessage(elementId, message, isError = false) {
             const element = document.getElementById(elementId);
@@ -423,6 +451,8 @@
             }
         }
 
+
+// === Налаштування та надсилання листів (EmailJS / Poe API / Webhook) ===
         // Налаштування EmailJS - ЗАМІНІТЬ НА ВАШІ КЛЮЧІ!
         const EMAIL_CONFIG = {
             publicKey: 'YOUR_EMAILJS_PUBLIC_KEY',      // Замініть на ваш Public Key
@@ -542,6 +572,8 @@
             document.getElementById('newsImage').dataset.removeImage = 'true';
         }
 
+
+// === Навігація між «сторінками» ===
         // Navigation functions
         function showPage(pageName) {
             // Hide all pages
@@ -582,6 +614,8 @@
             }
         }
 
+
+// === Реєстрація / Вхід / Вихід ===
         // Authentication
         function register(event) {
             event.preventDefault();
@@ -719,6 +753,8 @@
             showPage('home');
         }
 
+
+// === Рендер списку новин, тегів і деталей ===
         // News rendering
         function renderNewsList() {
             const container = document.getElementById('newsList');
@@ -793,6 +829,8 @@
             showPage('newsDetail');
         }
 
+
+// === CRUD‑функції для адміністраторів ===
         // Admin functions
         function renderAdminNewsList() {
             const container = document.getElementById('adminNewsList');
@@ -916,12 +954,16 @@
             showPage('admin');
         }
 
+
+// === Редактор форматованого тексту ===
         // WYSIWYG editor functions
         function formatText(command, value = null) {
             document.execCommand(command, false, value);
             document.getElementById('newsContent').focus();
         }
 
+
+// === Ініціалізація додатку ===
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
             // Ініціалізуємо EmailJS при завантаженні
