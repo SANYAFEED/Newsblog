@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="uk" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Новинний блог</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <style>
+        .wysiwyg-editor {
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .wysiwyg-toolbar button {
+            padding: 8px 12px;
+            margin: 2px;
+            border: 1px solid #000000;
+            background: white;
+            border-radius: 4px;
+        }
+        .wysiwyg-toolbar button:hover {
+            background: #ffffff;
+        }
+        .news-image {
+            max-width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        .tag {
+            display: inline-block;
+            padding: 4px 8px;
+            margin: 2px;
+            background: #000000;
+            color: white;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        .error-message {
+            color: #dc2626;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        .success-message {
+            color: #16a34a;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        .password-input-container {
+            position: relative;
+        }
+        .password-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            user-select: none;
+            color: #666;
+        }
+        .password-toggle:hover {
+            color: #000;
+        }
+        .remove-image-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#000000'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="h-full bg-white text-black">
+    <div id="app" class="min-h-full">
+        <!-- Navigation -->
+        <nav class="bg-white shadow-sm border-b border-black">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <h1 class="text-xl font-bold text-black">Новинний блог</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button onclick="showPage('home')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium text-black hover:bg-white">Головна</button>
+                        <button onclick="showPage('about')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium text-black hover:bg-white">Про додаток</button>
+                        <button id="loginBtn" onclick="showPage('login')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium text-black hover:bg-white">Вхід</button>
+                        <button id="registerBtn" onclick="showPage('register')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium text-black hover:bg-white">Реєстрація</button>
+                        <button id="adminBtn" onclick="showPage('admin')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium text-black hover:bg-white hidden">Адміністрування</button>
+                        <span id="userGreeting" class="text-black hidden"></span>
+                        <button id="logoutBtn" onclick="logout()" class="nav-btn px-3 py-2 rounded-md text-sm font-medium text-red-600 hover:bg-white hidden">Вихід</button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main content -->
+        <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <!-- Home page -->
+            <div id="homePage" class="page">
+                <div class="mb-6">
+                    <h2 class="text-3xl font-bold mb-4 text-black">Останні новини</h2>
+                    
+                    <!-- Tags filter -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2 text-black">Фільтр за тегами:</label>
+                        <div id="tagsFilter" class="flex flex-wrap gap-2">
+                            <button onclick="filterByTag(null)" class="tag-filter-btn bg-white border border-black px-3 py-1 rounded text-sm active">Всі</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="newsList" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    <!-- News items will be rendered here -->
+                </div>
+            </div>
+
+            <!-- News detail page -->
+            <div id="newsDetailPage" class="page hidden">
+                <button onclick="showPage('home')" class="mb-4 text-black hover:underline">← Повернутися до списку</button>
+                <div id="newsDetail"></div>
+            </div>
+
+            <!-- About page -->
+            <div id="aboutPage" class="page hidden">
+                <h2 class="text-3xl font-bold mb-6 text-black">Про додаток</h2>
+                <div class="bg-white border border-black p-6 rounded-lg">
+                    <h3 class="text-xl font-semibold mb-4 text-black">Функції додатку:</h3>
+                    <ul class="list-disc list-inside space-y-2 mb-6 text-black">
+                        <li>Перегляд новин для відвідувачів</li>
+                        <li>Фільтрація новин за тегами</li>
+                        <li>Повний перегляд статей</li>
+                        <li>Реєстрація та індивідуальні акаунти</li>
+                        <li>Адміністрування контенту (для адміністраторів)</li>
+                        <li>Завантаження зображень</li>
+                        <li>WYSIWYG редактор для форматування тексту</li>
+                        <li>Система тегів</li>
+                        <li>Email сповіщення</li>
+                        <li>Необмежена кількість новин</li>
+                    </ul>
+                    <h3 class="text-xl font-semibold mb-4 text-black">Розробник:</h3>
+                    <p class="text-black">Цей додаток створено як демонстрація веб-технологій для новинного блогу з системою користувачів.</p>
+                </div>
+            </div>
+
+            <!-- Register page -->
+            <div id="registerPage" class="page hidden">
+                <div class="max-w-md mx-auto bg-white border border-black p-6 rounded-lg shadow">
+                    <h2 class="text-2xl font-bold mb-6 text-center text-black">Реєстрація</h2>
+                    <form onsubmit="register(event)">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2 text-black">Ім'я:</label>
+                            <input type="text" id="registerName" class="w-full px-3 py-2 text-base border border-black rounded-md bg-white text-black" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2 text-black">Email:</label>
+                            <input type="email" id="registerEmail" class="w-full px-3 py-2 text-base border border-black rounded-md bg-white text-black" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2 text-black">Логін:</label>
+                            <input type="text" id="registerUsername" class="w-full px-3 py-2 text-base border border-black rounded-md bg-white text-black" required minlength="3">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2 text-black">Пароль:</label>
+                            <div class="password-input-container">
+                                <input type="password" id="registerPassword" class="w-full px-3 py-2 text-base border border-black rounded-md bg-white text-black pr-10" required minlength="6">
+                                <span class="password-toggle" onclick="togglePassword('registerPassword', this)">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </span>
+                            </div>
+                            <div class="text-sm text-black mt-1">Мінімум 6 символів</div>
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium mb-2 text-black">Підтвердіть пароль:</label>
+                            <div class="password-input-container">
+                                <input type="password" id="registerPasswordConfirm" class="w-full px-3 py-2 text-base border border-black rounded-md bg-white text-black pr-10" required>
+                                <span class="password-toggle" onclick="togglePassword('registerPasswordConfirm', this)">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                        <div id="registerMessage"></div>
+                        <button type="submit" class="w-full bg-black text-white py-2 px-4 rounded-md hover:bg-black mb-4">Зареєструватися</button>
+                    </form>
+                    <div class="text-center">
+                        <span class="text-black">Вже маєте акаунт? </span>
+                        <button onclick="showPage('login')" class="text-black underline hover:no-underline">Увійти</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Login page -->
+            <div id="loginPage" class="page hidden">
+                <div class="max-w-md mx-auto bg-white border border-black p-6 rounded-lg shadow">
+                    <h2 class="text-2xl font-bold mb-6 text-center text-black">Вхід до системи</h2>
+                    <form onsubmit="login(event)">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2 text-black">Логін:</label>
+                            <input type="text" id="loginUsername" class="w-full px-3 py-2 text-base border border-black rounded-md bg-white text-black" required>
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium mb-2 text-black">Пароль:</label>
+                            <div class="password-input-container">
+                                <input type="password" id="loginPassword" class="w-full px-3 py-2 text-base border border-black rounded-md bg-white text-black pr-10" required>
+                                <span class="password-toggle" onclick="togglePassword('loginPassword', this)">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                        <div id="loginMessage"></div>
+                        <button type="submit" class="w-full bg-black text-white py-2 px-4 rounded-md hover:bg-black mb-4">Увійти</button>
+                    </form>
+                    <div class="text-center">
+                        <span class="text-black">Немає акаунту? </span>
+                        <button onclick="showPage('register')" class="text-black underline hover:no-underline">Зареєструватися</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin page -->
+            <div id="adminPage" class="page hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold text-black">Адміністрування новин</h2>
+                    <button onclick="showAddForm()" class="bg-black text-white px-4 py-2 rounded-md hover:bg-black">Додати новину</button>
+                </div>
+                
+                <div class="bg-white border border-black rounded-lg shadow overflow-hidden">
+                    <table class="min-w-full">
+                        <thead class="bg-white border-b border-black">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Назва</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Автор</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Дата</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminNewsList" class="bg-white divide-y divide-black">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Add/Edit news form -->
+            <div id="newsFormPage" class="page hidden">
+                <div class="max-w-4xl mx-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 id="formTitle" class="text-3xl font-bold text-black">Додати новину</h2>
+                        <button onclick="showPage('admin')" class="text-black hover:text-black">Скасувати</button>
+                    </div>
+                    
+                    <form onsubmit="saveNews(event)" class="bg-white border border-black p-6 rounded-lg shadow">
+                        <input type="hidden" id="newsId">
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2 text-black">Назва:</label>
+                            <input type="text" id="newsTitle" class="w-full px-3 py-2 text-base border border-black rounded-md bg-white text-black" required>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2 text-black">Автор:</label>
+                            <input type="text" id="newsAuthor" class="w-full px-3 py-2 text-base border border-black rounded-md bg-white text-black" required>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2 text-black">Зображення:</label>
+                            <input type="file" id="newsImage" accept="image/*" class="w-full px-3 py-2 text-base border border-black rounded-md bg-white text-black">
+                            <div id="currentImageContainer" class="mt-2 hidden relative inline-block">
+                                <img id="currentImage" class="news-image" alt="Поточне зображення">
+                                <button type="button" class="remove-image-btn" onclick="removeCurrentImage()" title="Видалити зображення">×</button>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2 text-black">Теги (через кому):</label>
+                            <input type="text" id="newsTags" placeholder="політика, економіка, спорт" class="w-full px-3 py-2 text-base border border-black rounded-md bg-white text-black">
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium mb-2 text-black">Зміст:</label>
+                            
+                            <!-- WYSIWYG toolbar -->
+                            <div class="wysiwyg-toolbar border border-black rounded-t-md p-2 bg-white">
+                                <button type="button" onclick="formatText('bold')" title="Жирний"><strong>B</strong></button>
+                                <button type="button" onclick="formatText('italic')" title="Курсив"><em>I</em></button>
+                                <button type="button" onclick="formatText('underline')" title="Підкреслений"><u>U</u></button>
+                                <button type="button" onclick="formatText('insertUnorderedList')" title="Список">•</button>
+                                <button type="button" onclick="formatText('formatBlock', 'h2')" title="Заголовок">H</button>
+                                <button type="button" onclick="formatText('createLink')" title="Посилання">🔗</button>
+                            </div>
+                            
+                            <div id="newsContent" class="wysiwyg-editor w-full px-3 py-2 text-base border border-t-0 border-black rounded-b-md bg-white text-black" contenteditable="true" style="min-height: 200px;"></div>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-4">
+                            <button type="button" onclick="showPage('admin')" class="px-4 py-2 border border-black rounded-md hover:bg-white">Скасувати</button>
+                            <button type="submit" class="bg-black text-white px-4 py-2 rounded-md hover:bg-black">Зберегти</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Application state
+        let currentUser = null;
+        let currentPage = 'home';
+        let currentFilter = null;
+        let editingNewsId = null;
+        
+        // Users database (in memory for this demo)
+        let users = [
+            {
+                id: 1,
+                name: "Дмитро Буйновський",
+                email: "dimabuynovskiy11@gmail.com",
+                username: "dimabuinovskyi",
+                password: "Qwerty0221",
+                role: "admin"
+            },
+            {
+                id: 2,
+                name: "Олександр Закусило",
+                email: "sanyazakysulo@gmail.com",
+                username: "sanyazakysulo",
+                password: "Qwerty0221",
+                role: "admin"
+            }
+        ];
+        
+        // Sample data
+        let newsData = [
+            {
+                id: 1,
+                title: "Важливі новини економіки",
+                author: "Іван Петренко",
+                date: new Date('2024-01-15'),
+                content: "<h2>Економічні зміни</h2><p>Сьогодні відбулися важливі зміни в економічному секторі. <strong>Експерти прогнозують</strong> позитивні тенденції на найближчі місяці.</p><ul><li>Зростання ВВП</li><li>Зниження інфляції</li><li>Стабілізація валюти</li></ul>",
+                image: null,
+                tags: ["економіка", "політика"]
+            },
+            {
+                id: 2,
+                title: "Спортивні досягнення",
+                author: "Марія Коваленко",
+                date: new Date('2024-01-14'),
+                content: "<h2>Перемога команди</h2><p>Наша національна команда здобула <em>впевнену перемогу</em> у важливому матчі. Це перша перемога за останні три місяці.</p><p>Тренер команди висловив задоволення результатом і подякував вболівальникам за підтримку.</p>",
+                image: null,
+                tags: ["спорт", "футбол"]
+            },
+            {
+                id: 3,
+                title: "Технологічні інновації",
+                author: "Олексій Сидоренко",
+                date: new Date('2024-01-13'),
+                content: "<h2>Новітні технології</h2><p>Представлено нові технологічні рішення, які можуть змінити нашу повсякденність. <strong>Інновації включають:</strong></p><ul><li>Штучний інтелект</li><li>Розумні пристрої</li><li>Екологічні рішення</li></ul><p>Експерти очікують швидкого впровадження цих технологій.</p>",
+                image: null,
+                tags: ["технології", "інновації"]
+            }
+        ];
+
+        // Utility functions
+        function showMessage(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="${isError ? 'error-message' : 'success-message'}">${message}</div>`;
+            setTimeout(() => {
+                element.innerHTML = '';
+            }, 5000);
+        }
+
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        function togglePassword(inputId, eyeElement) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                // Іконка закритого ока (пароль видно)
+                eyeElement.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                        <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 11 8 11 8a13.16 13.16 0 0 1-1.67 2.68"/>
+                        <path d="M6.61 6.61A13.526 13.526 0 0 0 1 12s4 8 11 8a9.74 9.74 0 0 0 5-1.73"/>
+                        <line x1="2" y1="2" x2="22" y2="22"/>
+                    </svg>
+                `;
+            } else {
+                input.type = 'password';
+                // Іконка відкритого ока (пароль прихований)
+                eyeElement.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                `;
+            }
+        }
+
+        // Налаштування EmailJS - ЗАМІНІТЬ НА ВАШІ КЛЮЧІ!
+        const EMAIL_CONFIG = {
+            publicKey: 'YOUR_EMAILJS_PUBLIC_KEY',      // Замініть на ваш Public Key
+            serviceId: 'YOUR_EMAILJS_SERVICE_ID',      // Замініть на ваш Service ID  
+            templateId: 'YOUR_EMAILJS_TEMPLATE_ID'     // Замініть на ваш Template ID
+        };
+
+        // Ініціалізація EmailJS
+        function initEmailJS() {
+            if (typeof emailjs !== 'undefined' && EMAIL_CONFIG.publicKey !== 'YOUR_EMAILJS_PUBLIC_KEY') {
+                emailjs.init(EMAIL_CONFIG.publicKey);
+                console.log('EmailJS ініціалізовано успішно');
+                return true;
+            }
+            console.log('EmailJS не налаштовано або недоступний');
+            return false;
+        }
+
+        async function sendEmailNotification(email, type, username) {
+            const subject = type === 'register' ? 'Реєстрація в новинному блозі' : 'Вхід в новинний блог';
+            const message = type === 'register' 
+                ? `Вітаємо! Ви успішно зареєструвалися в новинному блозі з логіном: ${username}. Ваш акаунт створено ${new Date().toLocaleString('uk-UA')}.`
+                : `Ви увійшли в новинний блог з логіном: ${username} о ${new Date().toLocaleString('uk-UA')}. Якщо це були не ви, негайно зверніться до адміністратора.`;
+            
+            // Спробуємо EmailJS спочатку
+            if (initEmailJS()) {
+                try {
+                    console.log(`Відправляємо email через EmailJS на ${email}...`);
+                    
+                    const templateParams = {
+                        to_email: email,
+                        subject: subject,
+                        message: message,
+                        username: username,
+                        timestamp: new Date().toLocaleString('uk-UA')
+                    };
+
+                    const result = await emailjs.send(
+                        EMAIL_CONFIG.serviceId,
+                        EMAIL_CONFIG.templateId,
+                        templateParams
+                    );
+
+                    console.log('Email успішно відправлено через EmailJS:', result);
+                    return { success: true, method: 'EmailJS', result };
+
+                } catch (error) {
+                    console.error('Помилка EmailJS:', error);
+                    // Продовжуємо з альтернативними методами
+                }
+            }
+
+            // Альтернатива 1: Poe API (якщо EmailJS не працює)
+            if (typeof window.Poe !== 'undefined' && typeof window.Poe.sendUserMessage === 'function') {
+                try {
+                    console.log(`Відправляємо email через Poe API на ${email}...`);
+                    
+                    const result = await window.Poe.sendUserMessage(
+                        `@Claude-Sonnet-4 Надішли email на адресу ${email}. Тема: "${subject}". Текст повідомлення: "${message}". Підпис: "З повагою, команда новинного блогу".`,
+                        {
+                            openChat: false,
+                            stream: false
+                        }
+                    );
+                    
+                    console.log('Email відправлено через Poe API');
+                    return { success: true, method: 'Poe API', result };
+                    
+                } catch (error) {
+                    console.error('Помилка Poe API:', error);
+                }
+            }
+
+            // Альтернатива 2: Webhook сервіс (додайте ваш webhook URL)
+            try {
+                const webhookUrl = 'YOUR_WEBHOOK_URL'; // Замініть на ваш webhook
+                
+                if (webhookUrl !== 'YOUR_WEBHOOK_URL') {
+                    console.log(`Відправляємо email через Webhook на ${email}...`);
+                    
+                    const response = await fetch(webhookUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            to: email,
+                            subject: subject,
+                            message: message,
+                            username: username
+                        })
+                    });
+
+                    if (response.ok) {
+                        console.log('Email відправлено через Webhook');
+                        return { success: true, method: 'Webhook' };
+                    }
+                }
+            } catch (error) {
+                console.error('Помилка Webhook:', error);
+            }
+
+            // Якщо всі методи не спрацювали - логуємо в консоль
+            console.log('=== EMAIL СПОВІЩЕННЯ (РЕЗЕРВНИЙ РЕЖИМ) ===');
+            console.log(`Кому: ${email}`);
+            console.log(`Тема: ${subject}`);
+            console.log(`Повідомлення: ${message}`);
+            console.log('==========================================');
+            
+            return { success: false, method: 'console', reason: 'Всі email сервіси недоступні' };
+        }
+
+        function removeCurrentImage() {
+            document.getElementById('currentImageContainer').classList.add('hidden');
+            document.getElementById('currentImage').src = '';
+            // Встановлюємо флаг для видалення зображення
+            document.getElementById('newsImage').dataset.removeImage = 'true';
+        }
+
+        // Navigation functions
+        function showPage(pageName) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.add('hidden');
+            });
+            
+            // Show selected page
+            document.getElementById(pageName + 'Page').classList.remove('hidden');
+            currentPage = pageName;
+            
+            // Update navigation
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-black', 'text-white');
+                btn.classList.add('text-black');
+            });
+            
+            // Clear messages when switching pages
+            ['loginMessage', 'registerMessage'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) element.innerHTML = '';
+            });
+            
+            // Load page-specific content
+            switch(pageName) {
+                case 'home':
+                    renderNewsList();
+                    renderTagsFilter();
+                    break;
+                case 'admin':
+                    if (currentUser && currentUser.role === 'admin') {
+                        renderAdminNewsList();
+                    } else {
+                        showMessage('loginMessage', 'Доступ заборонено. Потрібні права адміністратора.', true);
+                        showPage('login');
+                    }
+                    break;
+            }
+        }
+
+        // Authentication
+        function register(event) {
+            event.preventDefault();
+            
+            const name = document.getElementById('registerName').value.trim();
+            const email = document.getElementById('registerEmail').value.trim();
+            const username = document.getElementById('registerUsername').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
+            
+            // Validation
+            if (name.length < 2) {
+                showMessage('registerMessage', 'Ім\'я повинно містити принаймні 2 символи', true);
+                return;
+            }
+            
+            if (!validateEmail(email)) {
+                showMessage('registerMessage', 'Введіть правильний email', true);
+                return;
+            }
+            
+            if (username.length < 3) {
+                showMessage('registerMessage', 'Логін повинен містити принаймні 3 символи', true);
+                return;
+            }
+            
+            if (password.length < 6) {
+                showMessage('registerMessage', 'Пароль повинен містити принаймні 6 символів', true);
+                return;
+            }
+            
+            if (password !== passwordConfirm) {
+                showMessage('registerMessage', 'Паролі не співпадають', true);
+                return;
+            }
+            
+            // Check if username or email already exists
+            if (users.find(user => user.username === username)) {
+                showMessage('registerMessage', 'Користувач з таким логіном вже існує', true);
+                return;
+            }
+            
+            if (users.find(user => user.email === email)) {
+                showMessage('registerMessage', 'Користувач з таким email вже існує', true);
+                return;
+            }
+            
+            // Create new user
+            const newUser = {
+                id: Math.max(...users.map(u => u.id)) + 1,
+                name,
+                email,
+                username,
+                password,
+                role: 'user'
+            };
+            
+            users.push(newUser);
+            
+            // Send email notification
+            showMessage('registerMessage', 'Реєстрація успішна! Відправляємо сповіщення на вашу пошту...', false);
+            
+            sendEmailNotification(email, 'register', username).then(emailResult => {
+                if (emailResult.success) {
+                    showMessage('registerMessage', 'Реєстрація успішна! Email сповіщення відправлено. Перевірте чат з Claude або вашу пошту. Тепер ви можете увійти в систему.', false);
+                } else {
+                    showMessage('registerMessage', `Реєстрація успішна! Проте email не вдалося відправити (${emailResult.reason || emailResult.error}). Ви все одно можете увійти в систему.`, false);
+                }
+            });
+            
+            // Clear form
+            document.getElementById('registerName').value = '';
+            document.getElementById('registerEmail').value = '';
+            document.getElementById('registerUsername').value = '';
+            document.getElementById('registerPassword').value = '';
+            document.getElementById('registerPasswordConfirm').value = '';
+            
+            // Redirect to login after a delay
+            setTimeout(() => {
+                showPage('login');
+            }, 3000);
+        }
+
+        function login(event) {
+            event.preventDefault();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            
+            // Find user
+            const user = users.find(u => u.username === username && u.password === password);
+            
+            if (user) {
+                currentUser = user;
+                
+                // Update navigation first
+                document.getElementById('loginBtn').classList.add('hidden');
+                document.getElementById('registerBtn').classList.add('hidden');
+                document.getElementById('userGreeting').classList.remove('hidden');
+                document.getElementById('userGreeting').textContent = `Вітаємо, ${user.name}!`;
+                document.getElementById('logoutBtn').classList.remove('hidden');
+                
+                if (user.role === 'admin') {
+                    document.getElementById('adminBtn').classList.remove('hidden');
+                    showPage('admin');
+                } else {
+                    showPage('home');
+                }
+                
+                // Clear form
+                document.getElementById('loginUsername').value = '';
+                document.getElementById('loginPassword').value = '';
+                
+                // Send email notification
+                showMessage('loginMessage', 'Успішний вхід! Відправляємо сповіщення на вашу пошту...', false);
+                
+                sendEmailNotification(user.email, 'login', username).then(emailResult => {
+                    if (emailResult.success) {
+                        console.log('Email успішно відправлено через Claude. Перевірте чат або вашу пошту.');
+                    } else {
+                        console.log(`Email не вдалося відправити: ${emailResult.reason || emailResult.error}`);
+                    }
+                });
+            } else {
+                showMessage('loginMessage', 'Невірний логін або пароль', true);
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('loginBtn').classList.remove('hidden');
+            document.getElementById('registerBtn').classList.remove('hidden');
+            document.getElementById('adminBtn').classList.add('hidden');
+            document.getElementById('userGreeting').classList.add('hidden');
+            document.getElementById('logoutBtn').classList.add('hidden');
+            showPage('home');
+        }
+
+        // News rendering
+        function renderNewsList() {
+            const container = document.getElementById('newsList');
+            let filteredNews = newsData;
+            
+            if (currentFilter) {
+                filteredNews = newsData.filter(news => 
+                    news.tags.includes(currentFilter)
+                );
+            }
+            
+            container.innerHTML = filteredNews.map(news => `
+                <div class="bg-white border border-black rounded-lg shadow-md overflow-hidden">
+                    ${news.image ? `<img src="${news.image}" alt="${news.title}" class="news-image">` : ''}
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold mb-2 text-black">${news.title}</h3>
+                        <p class="text-black text-sm mb-2">
+                            ${news.author} • ${news.date.toLocaleDateString('uk-UA')}
+                        </p>
+                        <div class="mb-3">
+                            ${news.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                        </div>
+                        <div class="text-black mb-4">
+                            ${news.content.replace(/<[^>]*>/g, '').substring(0, 150)}...
+                        </div>
+                        <button onclick="showNewsDetail(${news.id})" class="text-black hover:underline">
+                            Читати далі →
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderTagsFilter() {
+            const container = document.getElementById('tagsFilter');
+            const allTags = [...new Set(newsData.flatMap(news => news.tags))];
+            
+            container.innerHTML = `
+                <button onclick="filterByTag(null)" class="tag-filter-btn bg-white border px-3 py-1 rounded text-sm text-black ${!currentFilter ? 'border-4 border-black font-bold' : 'border-black'}">Всі</button>
+                ${allTags.map(tag => `
+                    <button onclick="filterByTag('${tag}')" class="tag-filter-btn bg-white border px-3 py-1 rounded text-sm text-black ${currentFilter === tag ? 'border-4 border-black font-bold' : 'border-black'}">${tag}</button>
+                `).join('')}
+            `;
+        }
+
+        function filterByTag(tag) {
+            currentFilter = tag;
+            renderNewsList();
+            renderTagsFilter();
+        }
+
+        function showNewsDetail(id) {
+            const news = newsData.find(n => n.id === id);
+            if (!news) return;
+            
+            document.getElementById('newsDetail').innerHTML = `
+                <article class="bg-white border border-black rounded-lg shadow-md p-6">
+                    ${news.image ? `<img src="${news.image}" alt="${news.title}" class="w-full h-64 object-cover rounded-lg mb-6">` : ''}
+                    <h1 class="text-3xl font-bold mb-4 text-black">${news.title}</h1>
+                    <div class="text-black mb-4">
+                        <p>${news.author} • ${news.date.toLocaleDateString('uk-UA')}</p>
+                        <div class="mt-2">
+                            ${news.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="prose max-w-none text-black">
+                        ${news.content}
+                    </div>
+                </article>
+            `;
+            
+            showPage('newsDetail');
+        }
+
+        // Admin functions
+        function renderAdminNewsList() {
+            const container = document.getElementById('adminNewsList');
+            container.innerHTML = newsData.map(news => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-black">${news.title}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-black">${news.author}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-black">${news.date.toLocaleDateString('uk-UA')}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <button onclick="editNews(${news.id})" class="text-black hover:underline mr-4">Редагувати</button>
+                        <button onclick="deleteNews(${news.id})" class="text-red-600 hover:underline">Видалити</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showAddForm() {
+            editingNewsId = null;
+            document.getElementById('formTitle').textContent = 'Додати новину';
+            document.getElementById('newsTitle').value = '';
+            document.getElementById('newsAuthor').value = '';
+            document.getElementById('newsTags').value = '';
+            document.getElementById('newsContent').innerHTML = '';
+            document.getElementById('newsImage').value = '';
+            document.getElementById('newsImage').dataset.removeImage = '';
+            document.getElementById('currentImageContainer').classList.add('hidden');
+            showPage('newsForm');
+        }
+
+        function editNews(id) {
+            const news = newsData.find(n => n.id === id);
+            if (!news) return;
+            
+            editingNewsId = id;
+            document.getElementById('formTitle').textContent = 'Редагувати новину';
+            document.getElementById('newsId').value = news.id;
+            document.getElementById('newsTitle').value = news.title;
+            document.getElementById('newsAuthor').value = news.author;
+            document.getElementById('newsTags').value = news.tags.join(', ');
+            document.getElementById('newsContent').innerHTML = news.content;
+            document.getElementById('newsImage').dataset.removeImage = '';
+            
+            if (news.image) {
+                document.getElementById('currentImage').src = news.image;
+                document.getElementById('currentImageContainer').classList.remove('hidden');
+            } else {
+                document.getElementById('currentImageContainer').classList.add('hidden');
+            }
+            
+            showPage('newsForm');
+        }
+
+        function deleteNews(id) {
+            if (confirm('Ви впевнені, що хочете видалити цю новину?')) {
+                newsData = newsData.filter(n => n.id !== id);
+                renderAdminNewsList();
+                renderNewsList();
+            }
+        }
+
+        function saveNews(event) {
+            event.preventDefault();
+            
+            const title = document.getElementById('newsTitle').value;
+            const author = document.getElementById('newsAuthor').value;
+            const tags = document.getElementById('newsTags').value.split(',').map(tag => tag.trim()).filter(tag => tag);
+            const content = document.getElementById('newsContent').innerHTML;
+            const imageFile = document.getElementById('newsImage').files[0];
+            const removeImage = document.getElementById('newsImage').dataset.removeImage === 'true';
+            
+            const newsItem = {
+                title,
+                author,
+                tags,
+                content,
+                date: new Date()
+            };
+            
+            // Handle image upload
+            if (imageFile) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    newsItem.image = e.target.result;
+                    saveNewsItem(newsItem);
+                };
+                reader.readAsDataURL(imageFile);
+            } else {
+                if (editingNewsId && !removeImage) {
+                    const existingNews = newsData.find(n => n.id === editingNewsId);
+                    newsItem.image = existingNews.image;
+                } else {
+                    newsItem.image = null;
+                }
+                saveNewsItem(newsItem);
+            }
+        }
+
+        function saveNewsItem(newsItem) {
+            if (editingNewsId) {
+                // Update existing news
+                const index = newsData.findIndex(n => n.id === editingNewsId);
+                
+                // Якщо встановлено флаг видалення зображення, видаляємо його
+                if (document.getElementById('newsImage').dataset.removeImage === 'true') {
+                    newsItem.image = null;
+                }
+                
+                newsData[index] = { ...newsData[index], ...newsItem };
+            } else {
+                // Add new news
+                newsItem.id = Math.max(...newsData.map(n => n.id)) + 1;
+                newsData.push(newsItem);
+            }
+            
+            showPage('admin');
+        }
+
+        // WYSIWYG editor functions
+        function formatText(command, value = null) {
+            document.execCommand(command, false, value);
+            document.getElementById('newsContent').focus();
+        }
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            // Ініціалізуємо EmailJS при завантаженні
+            initEmailJS();
+            showPage('home');
+        });
+
+        // Якщо DOMContentLoaded вже пройшов
+        if (document.readyState === 'loading') {
+            // Чекаємо завантаження
+        } else {
+            // Документ вже завантажений
+            initEmailJS();
+            showPage('home');
+        }
+    </script>
+</body>
+</html>
